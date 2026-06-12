@@ -41,7 +41,7 @@ func (l *rateLimiter) allow(key string) bool {
 	return true
 }
 
-// take consumes a token without gating — used to charge a budget after the
+// take consumes a token without gating, used to charge a budget after the
 // fact (e.g. failed unwrap attempts), letting the balance go negative.
 func (l *rateLimiter) take(key string) {
 	l.mu.Lock()

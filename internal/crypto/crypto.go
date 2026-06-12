@@ -1,7 +1,7 @@
 // Package crypto implements secretstash's zero-knowledge sealing scheme.
 //
 // The wrap token is the only key material. The server stores ciphertext,
-// salt, nonce, and SHA-256(token) — nothing stored can decrypt a secret.
+// salt, nonce, and SHA-256(token); nothing stored can decrypt a secret.
 package crypto
 
 import (
@@ -68,7 +68,7 @@ func ParseToken(token string) ([]byte, error) {
 
 // LookupID derives the storage key from raw token bytes. The token has 256
 // bits of entropy, so SHA-256 preimage resistance makes the hash safe to
-// store, and the map lookup itself serves as the auth check — there is no
+// store, and the map lookup itself serves as the auth check, so there is no
 // secret-dependent comparison that would need to be constant-time. If direct
 // hash comparison is ever added, use subtle.ConstantTimeCompare.
 func LookupID(rawToken []byte) string {
@@ -79,7 +79,7 @@ func LookupID(rawToken []byte) string {
 // Seal encrypts plaintext under a key derived from the token. The returned
 // Sealed contains no decryption capability. The derived key is zeroed before
 // returning; callers should zero rawToken and plaintext when done (best
-// effort — Go's GC may have made copies).
+// effort, since Go's GC may have made copies).
 func Seal(rawToken, plaintext []byte) (*Sealed, error) {
 	salt := make([]byte, saltBytes)
 	if _, err := rand.Read(salt); err != nil {

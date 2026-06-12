@@ -22,7 +22,7 @@ var (
 	ErrFull = errors.New("store is full")
 )
 
-// GoneError reports that a secret existed but is no longer available — the
+// GoneError reports that a secret existed but is no longer available: the
 // tamper-evident signal. At carries the burn/expiry/revocation time.
 type GoneError struct {
 	Reason string

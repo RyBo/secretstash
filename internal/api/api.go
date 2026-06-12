@@ -307,7 +307,7 @@ func (a *API) writeGone(w http.ResponseWriter, r *http.Request, id string, err e
 		e := apiError{Code: gone.Reason}
 		switch gone.Reason {
 		case store.ReasonConsumed:
-			e.Message = "secret already consumed — its final read occurred at " + at.Format(time.RFC3339)
+			e.Message = "secret already consumed; its final read occurred at " + at.Format(time.RFC3339)
 			e.ConsumedAt = &at
 		case store.ReasonExpired:
 			e.Message = "secret expired at " + at.Format(time.RFC3339)

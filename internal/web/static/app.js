@@ -133,7 +133,7 @@ if ($("reveal")) {
     $("revealed-meta").textContent =
       body.reads_remaining > 0
         ? `${body.reads_remaining} read${body.reads_remaining > 1 ? "s" : ""} remaining`
-        : "That was the final read — the secret is now destroyed.";
+        : "That was the final read. The secret is now destroyed.";
     show("revealed");
   });
 

@@ -61,7 +61,7 @@ func TestWrapUnwrapRoundTrip(t *testing.T) {
 	}
 	// Raw secret on stdout, nothing else.
 	if stdout != "the payload" {
-		t.Fatalf("stdout %q — must be the raw secret only", stdout)
+		t.Fatalf("stdout %q, must be the raw secret only", stdout)
 	}
 	if !strings.Contains(stderr, "destroyed") {
 		t.Fatalf("metadata missing from stderr: %q", stderr)

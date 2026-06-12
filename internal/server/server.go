@@ -121,7 +121,7 @@ func banner(cfg Config, scheme, tlsDesc string) {
 
   listening: %s://%s
   web UI:    %v
-  storage:   in-memory only — ALL SECRETS ARE LOST ON RESTART (by design)
+  storage:   in-memory only; ALL SECRETS ARE LOST ON RESTART (by design)
   %s
 
 `, version.Version, scheme, cfg.Listen, !cfg.NoUI, tlsDesc)

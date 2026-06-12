@@ -25,7 +25,7 @@ const (
 	ExitNotFound = 4
 )
 
-const usage = `secretstash — share secrets via one-time self-destructing links
+const usage = `secretstash: share secrets via one-time self-destructing links
 
 Usage: secretstash <command> [flags]
 

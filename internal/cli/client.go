@@ -204,7 +204,7 @@ func cmdUnwrap(args []string, stdout, stderr io.Writer) int {
 	if resp.ReadsRemaining > 0 {
 		fmt.Fprintf(stderr, "\n%d read(s) remaining\n", resp.ReadsRemaining)
 	} else {
-		fmt.Fprintln(stderr, "\nfinal read — the secret is now destroyed")
+		fmt.Fprintln(stderr, "\nfinal read, the secret is now destroyed")
 	}
 	return ExitOK
 }
