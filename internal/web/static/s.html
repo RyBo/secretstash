@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>secretstash — a secret is waiting</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main>
+  <h1><a href="/">secretstash</a></h1>
+  <p class="tagline">Someone shared a secret with you.</p>
+
+  <div id="waiting" class="panel hidden">
+    <p class="banner info">A secret is waiting for you.</p>
+    <p id="waiting-meta" class="meta"></p>
+    <button id="reveal">Reveal secret (consumes a read)</button>
+  </div>
+
+  <div id="revealed" class="panel hidden">
+    <p class="banner ok">Secret revealed. It is not stored in this page — copy it before closing.</p>
+    <pre id="secret" class="secret"></pre>
+    <div class="copyfield">
+      <button data-copy="secret">Copy secret</button>
+    </div>
+    <p id="revealed-meta" class="meta"></p>
+  </div>
+
+  <div id="gone" class="panel hidden">
+    <p class="banner warn" id="gone-msg"></p>
+    <p class="meta error-detail" id="gone-detail"></p>
+  </div>
+
+  <div id="nolink" class="panel hidden">
+    <p class="banner warn">This link is missing its secret token. Make sure you copied the full link, including everything after the <code>#</code>.</p>
+  </div>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>
