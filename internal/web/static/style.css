@@ -1,19 +1,24 @@
 :root {
-  --bg: #0f1117;
-  --panel: #181b24;
-  --border: #2a2f3d;
-  --text: #e6e8ee;
-  --muted: #8b91a3;
-  --accent: #4f8cff;
-  --danger: #ff5d5d;
-  --ok: #3ecf8e;
+  --bg: #0b0c10;            /* neutral near-black */
+  --panel: #14161c;         /* slate charcoal */
+  --border: #2a2e38;        /* neutral slate */
+  --text: #e7e9ef;          /* soft white */
+  --muted: #8c93a1;         /* slate-gray */
+  --accent: #8a2c3a;        /* muted garnet: solid fills, white text on top */
+  --accent-bright: #e0929b; /* dusty rose: text/links on dark backgrounds */
+  --danger: #e8636d;        /* soft scarlet */
+  --ok: #3bbf85;            /* jade */
+  --glow: rgba(138, 44, 58, .30);
 }
 
 * { box-sizing: border-box; }
 
+::selection { background: var(--accent); color: #fff; }
+
 body {
   margin: 0;
-  background: var(--bg);
+  background: radial-gradient(900px 500px at 50% -8%, #15171f, var(--bg) 62%) no-repeat, var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   display: flex;
@@ -24,7 +29,13 @@ body {
 
 main { width: 100%; max-width: 560px; padding: 2rem 1rem; }
 
-h1 { font-size: 1.4rem; margin: 0 0 0.25rem; }
+h1 {
+  margin: 0 0 0.25rem;
+  font-family: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
+  font-size: 1.7rem;
+  letter-spacing: .01em;
+  text-shadow: 0 0 22px rgba(138, 44, 58, .14);
+}
 h1 a { color: var(--text); text-decoration: none; }
 .tagline { color: var(--muted); margin: 0 0 1.5rem; font-size: 0.9rem; }
 
@@ -34,7 +45,10 @@ h1 a { color: var(--text); text-decoration: none; }
   border-radius: 10px;
   padding: 1.25rem;
   margin-bottom: 1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .55);
 }
+
+:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
 
 textarea, input, select {
   width: 100%;
@@ -44,6 +58,12 @@ textarea, input, select {
   border-radius: 6px;
   padding: 0.6rem;
   font: inherit;
+}
+
+textarea:focus, input:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(138, 44, 58, .25);
+  outline: none;
 }
 
 textarea { min-height: 7rem; resize: vertical; font-family: ui-monospace, monospace; }
@@ -64,8 +84,9 @@ button {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+  transition: filter .15s ease, box-shadow .15s ease;
 }
-button:hover { filter: brightness(1.1); }
+button:hover { filter: brightness(1.1); box-shadow: 0 8px 24px var(--glow); }
 button.secondary { background: var(--panel); border: 1px solid var(--border); color: var(--text); }
 
 .hidden { display: none; }
@@ -76,9 +97,9 @@ button.secondary { background: var(--panel); border: 1px solid var(--border); co
   font-size: 0.85rem;
   margin-bottom: 0.75rem;
 }
-.banner.warn { background: rgba(255, 93, 93, 0.12); color: var(--danger); border: 1px solid rgba(255, 93, 93, 0.4); }
-.banner.ok { background: rgba(62, 207, 142, 0.1); color: var(--ok); border: 1px solid rgba(62, 207, 142, 0.35); }
-.banner.info { background: rgba(79, 140, 255, 0.1); color: var(--accent); border: 1px solid rgba(79, 140, 255, 0.35); }
+.banner.warn { background: rgba(232, 99, 109, 0.1); color: var(--danger); border: 1px solid rgba(232, 99, 109, 0.35); }
+.banner.ok { background: rgba(59, 191, 133, 0.1); color: var(--ok); border: 1px solid rgba(59, 191, 133, 0.35); }
+.banner.info { background: rgba(138, 44, 58, 0.16); color: var(--accent-bright); border: 1px solid rgba(138, 44, 58, 0.4); }
 
 .copyfield { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
 .copyfield input { font-family: ui-monospace, monospace; font-size: 0.85rem; }
