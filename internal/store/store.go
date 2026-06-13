@@ -168,6 +168,14 @@ func (s *Store) Len() int {
 	return len(s.entries)
 }
 
+// Stats returns the current live entry and tombstone counts. Both are sampled
+// under one lock so they are mutually consistent.
+func (s *Store) Stats() (live, tombstones int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.entries), len(s.tombs)
+}
+
 // liveLocked resolves lookupID to a live entry, applying lazy expiry. It
 // returns (nil, nil) when the ID was never seen, (nil, *GoneError) when a
 // tombstone records its fate, or the live entry. Caller must hold s.mu.

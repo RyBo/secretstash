@@ -91,6 +91,7 @@ func cmdServer(args []string, stderr io.Writer) int {
 	fs.BoolVar(&cfg.DevAllowRemote, "dev-allow-remote", false, "allow -dev on a non-loopback address")
 	fs.BoolVar(&cfg.TrustProxy, "trust-proxy", false, "trust X-Forwarded-For from a reverse proxy")
 	fs.BoolVar(&cfg.NoUI, "no-ui", false, "disable the web UI")
+	fs.BoolVar(&cfg.NoMetrics, "no-metrics", false, "disable the /metrics endpoint")
 	fs.StringVar(&cfg.ShareBaseURL, "share-base-url", "", "external base URL used in share links (default derived from listen address)")
 
 	maxSecretSize := fs.Int("max-secret-size", 64*1024, "maximum secret size in bytes")

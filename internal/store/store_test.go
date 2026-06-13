@@ -156,6 +156,24 @@ func TestPeekDoesNotConsume(t *testing.T) {
 	}
 }
 
+func TestStats(t *testing.T) {
+	s, _ := newTestStore(Limits{})
+	sealed, _ := newSealed(t)
+	s.Put(sealed, time.Hour, 1)
+
+	if live, tombs := s.Stats(); live != 1 || tombs != 0 {
+		t.Fatalf("after put: live=%d tombs=%d, want 1/0", live, tombs)
+	}
+
+	// Consuming the only read leaves a tombstone behind.
+	if _, err := s.Take(sealed.LookupID); err != nil {
+		t.Fatal(err)
+	}
+	if live, tombs := s.Stats(); live != 0 || tombs != 1 {
+		t.Fatalf("after take: live=%d tombs=%d, want 0/1", live, tombs)
+	}
+}
+
 func TestRevoke(t *testing.T) {
 	s, _ := newTestStore(Limits{})
 	sealed, _ := newSealed(t)

@@ -127,10 +127,18 @@ explicit click; loading the page never consumes a read.
 | `GET /v1/peek` | `X-Stash-Token` | metadata without consuming a read |
 | `DELETE /v1/secret` | `X-Stash-Token` | revoke before it's read |
 | `GET /v1/sys/health` | none | health/version |
+| `GET /metrics` | none | Prometheus metrics (on by default; see below) |
 
 Errors: `404 not_found` (never existed), `410 consumed|expired|revoked`
 (with timestamps, which is the tamper signal), `400` invalid input, `413`
 too large, `429` rate-limited, `507` store full.
+
+The `/metrics` endpoint exposes operational counters and gauges in Prometheus
+text format: wrap/unwrap/peek/revoke totals, unwrap failures by reason
+(including the tamper signal), store-full and rate-limited counts, plus live
+secret and tombstone gauges. It is unauthenticated and not rate limited, so
+restrict it at the network level (firewall, reverse proxy, or NetworkPolicy).
+Disable it entirely with `--no-metrics`.
 
 ## CLI
 
@@ -138,7 +146,7 @@ too large, `429` rate-limited, `507` store full.
 secretstash server   [--listen 127.0.0.1:8200] [--tls-cert F --tls-key F | --dev]
                      [--max-secret-size 65536] [--max-secrets 10000]
                      [--default-ttl 24h] [--max-ttl 168h] [--max-reads 100]
-                     [--trust-proxy] [--no-ui] [--share-base-url URL]
+                     [--trust-proxy] [--no-ui] [--no-metrics] [--share-base-url URL]
 secretstash wrap     [--ttl 30m] [--reads 1] [secret]     # or pipe via stdin
 secretstash unwrap   <token>     # secret to stdout, metadata to stderr (pipe-safe)
 secretstash peek     <token>     # metadata, does not consume a read

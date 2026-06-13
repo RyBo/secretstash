@@ -53,6 +53,7 @@ type API struct {
 	started time.Time
 	limiter *rateLimiter
 	failLim *rateLimiter
+	metrics *metrics
 }
 
 func New(st *store.Store, cfg Config, logger *slog.Logger) *API {
@@ -68,6 +69,7 @@ func New(st *store.Store, cfg Config, logger *slog.Logger) *API {
 		limiter: newRateLimiter(10, 20),
 		// Stricter budget for failed unwraps: ~5/min.
 		failLim: newRateLimiter(5.0/60.0, 5),
+		metrics: newMetrics(),
 	}
 }
 
@@ -185,6 +187,7 @@ func (a *API) handleWrap(w http.ResponseWriter, r *http.Request) {
 	entry, err := a.store.Put(sealed, ttl, reads)
 	if err != nil {
 		if errors.Is(err, store.ErrFull) {
+			a.metrics.recordStoreFull()
 			writeError(w, http.StatusInsufficientStorage, "store_full", "server secret store is full")
 			return
 		}
@@ -219,6 +222,7 @@ func (a *API) handleUnwrap(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Token hashed to the right slot but failed GCM auth: the stored
 		// ciphertext was tampered with. Loud server-side signal.
+		a.metrics.recordFailure("tamper")
 		a.log.Warn("audit", "event", "unwrap_failed", "reason", "tamper",
 			"id_prefix", idPrefix(id), "remote", remoteIP(r))
 		writeError(w, http.StatusInternalServerError, "internal", "decryption failed")
@@ -246,6 +250,7 @@ func (a *API) handlePeek(w http.ResponseWriter, r *http.Request) {
 		a.writeGone(w, r, id, err)
 		return
 	}
+	a.metrics.recordPeek()
 	writeJSON(w, http.StatusOK, peekResponse{
 		Exists:         true,
 		ExpiresAt:      entry.ExpiresAt.UTC(),
@@ -325,6 +330,7 @@ func (a *API) writeGone(w http.ResponseWriter, r *http.Request, id string, err e
 // rate-limit token for the caller's IP. A failure against a consumed secret
 // is the operator-side tamper alarm, hence WARN.
 func (a *API) failedAuth(w http.ResponseWriter, r *http.Request, reason, id string) {
+	a.metrics.recordFailure(reason)
 	a.failLim.take(remoteIP(r))
 	level := slog.LevelInfo
 	if reason == store.ReasonConsumed {
@@ -335,8 +341,20 @@ func (a *API) failedAuth(w http.ResponseWriter, r *http.Request, reason, id stri
 }
 
 func (a *API) audit(event string, r *http.Request, id string, kv ...any) {
+	a.metrics.recordEvent(event)
 	args := append([]any{"event", event, "id_prefix", idPrefix(id), "remote", remoteIP(r)}, kv...)
 	a.log.Info("audit", args...)
+}
+
+// HandleMetrics serves the Prometheus text exposition. It is registered
+// outside Routes() so scrapers are not subject to the per-IP rate limiter,
+// and is meant to be restricted at the network level (it is unauthenticated).
+func (a *API) HandleMetrics(w http.ResponseWriter, r *http.Request) {
+	live, tombs := a.store.Stats()
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+	a.metrics.writeProm(w, live, tombs, time.Since(a.started), version.Version)
 }
 
 func idPrefix(id string) string {

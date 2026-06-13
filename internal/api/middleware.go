@@ -67,6 +67,7 @@ func (a *API) rateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := remoteIP(r)
 		if !a.limiter.allow(ip) || !a.failLim.peekOK(ip) {
+			a.metrics.recordRateLimited()
 			w.Header().Set("Retry-After", "10")
 			writeError(w, http.StatusTooManyRequests, "rate_limited", "too many requests")
 			return

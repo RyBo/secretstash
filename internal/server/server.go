@@ -28,6 +28,7 @@ type Config struct {
 	DevAllowRemote bool // allow --dev on non-loopback listen
 	TrustProxy     bool
 	NoUI           bool
+	NoMetrics      bool   // disable the /metrics endpoint
 	ShareBaseURL   string // override external URL in share links
 
 	API    api.Config
@@ -65,6 +66,11 @@ func Run(cfg Config) error {
 
 	mux := http.NewServeMux()
 	mux.Handle("/v1/", a.Routes())
+	if !cfg.NoMetrics {
+		// Unauthenticated and outside the rate limiter: restrict at the
+		// network level. More specific than "/", so it coexists with the UI.
+		mux.HandleFunc("GET /metrics", a.HandleMetrics)
+	}
 	if !cfg.NoUI {
 		mux.Handle("/", web.Handler())
 	}
@@ -121,14 +127,22 @@ func banner(cfg Config, scheme, tlsDesc string) {
 
   listening: %s://%s
   web UI:    %v
+  metrics:   %v
   storage:   in-memory only; ALL SECRETS ARE LOST ON RESTART (by design)
   %s
 
-`, version.Version, scheme, cfg.Listen, !cfg.NoUI, tlsDesc)
+`, version.Version, scheme, cfg.Listen, !cfg.NoUI, metricsDesc(cfg.NoMetrics), tlsDesc)
 	if cfg.Dev {
 		fmt.Fprintln(os.Stderr, "  WARNING: --dev mode serves PLAINTEXT HTTP. Do not use in production.")
 		fmt.Fprintln(os.Stderr)
 	}
+}
+
+func metricsDesc(noMetrics bool) string {
+	if noMetrics {
+		return "disabled"
+	}
+	return "/metrics (unauthenticated; restrict at the network level)"
 }
 
 func isLoopback(listen string) bool {
