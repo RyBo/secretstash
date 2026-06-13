@@ -4,11 +4,11 @@
   --border: #2a2e38;        /* neutral slate */
   --text: #e7e9ef;          /* soft white */
   --muted: #8c93a1;         /* slate-gray */
-  --accent: #8a2c3a;        /* muted garnet: solid fills, white text on top */
-  --accent-bright: #e0929b; /* dusty rose: text/links on dark backgrounds */
+  --accent: #6a1a4d;        /* deep red-purple: solid fills, white text on top */
+  --accent-bright: #b4519c; /* rich orchid: text/links on dark backgrounds */
   --danger: #e8636d;        /* soft scarlet */
   --ok: #3bbf85;            /* jade */
-  --glow: rgba(138, 44, 58, .30);
+  --glow: rgba(106, 26, 77, .34);
 }
 
 * { box-sizing: border-box; }
@@ -31,12 +31,28 @@ main { width: 100%; max-width: 560px; padding: 2rem 1rem; }
 
 h1 {
   margin: 0 0 0.25rem;
-  font-family: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
-  font-size: 1.7rem;
-  letter-spacing: .01em;
-  text-shadow: 0 0 22px rgba(138, 44, 58, .14);
+  font-family: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  text-shadow: 0 0 22px rgba(106, 26, 77, .22);
 }
 h1 a { color: var(--text); text-decoration: none; }
+
+.brand { margin: 0.25rem 0 0.5rem; }
+.brand a { display: inline-block; line-height: 0; }
+.brand pre {
+  margin: 0;
+  font-family: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+  font-size: clamp(0.5rem, 2.7vw, 0.82rem);
+  line-height: 1.05;
+  font-weight: 600;
+  color: var(--accent-bright);
+  text-shadow: 0 0 18px var(--glow);
+  white-space: pre;
+  overflow: hidden;
+}
+.brand a:hover pre { filter: brightness(1.12); }
 .tagline { color: var(--muted); margin: 0 0 1.5rem; font-size: 0.9rem; }
 
 .panel {
@@ -62,7 +78,7 @@ textarea, input, select {
 
 textarea:focus, input:focus, select:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(138, 44, 58, .25);
+  box-shadow: 0 0 0 3px rgba(106, 26, 77, .28);
   outline: none;
 }
 
@@ -99,7 +115,7 @@ button.secondary { background: var(--panel); border: 1px solid var(--border); co
 }
 .banner.warn { background: rgba(232, 99, 109, 0.1); color: var(--danger); border: 1px solid rgba(232, 99, 109, 0.35); }
 .banner.ok { background: rgba(59, 191, 133, 0.1); color: var(--ok); border: 1px solid rgba(59, 191, 133, 0.35); }
-.banner.info { background: rgba(138, 44, 58, 0.16); color: var(--accent-bright); border: 1px solid rgba(138, 44, 58, 0.4); }
+.banner.info { background: rgba(106, 26, 77, 0.16); color: var(--accent-bright); border: 1px solid rgba(106, 26, 77, 0.4); }
 
 .copyfield { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
 .copyfield input { font-family: ui-monospace, monospace; font-size: 0.85rem; }
