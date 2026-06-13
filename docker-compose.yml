@@ -1,0 +1,34 @@
+# Production deployment with native TLS: secretstash terminates HTTPS itself
+# using real certificates you mount in. See the Deployment section of README.md
+# for obtaining certs (certbot) and for a Caddy reverse-proxy alternative.
+#
+#   1. Put your cert + key at ./certs/fullchain.pem and ./certs/privkey.pem
+#   2. docker compose up -d
+#
+services:
+  secretstash:
+    image: secretstash:latest
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION:-dev}
+    command:
+      - server
+      - --listen=0.0.0.0:8200
+      - --tls-cert=/certs/fullchain.pem
+      - --tls-key=/certs/privkey.pem
+      # Behind a reverse proxy instead? Drop the --tls-* flags above and add
+      # --trust-proxy so client IPs (rate limiting, audit log) are accurate.
+      # - --trust-proxy
+    ports:
+      - "8200:8200"
+    volumes:
+      - ./certs:/certs:ro
+    restart: unless-stopped
+    # Hardening: storage is in-memory and the image already runs as nonroot,
+    # so the container needs no writable rootfs and no Linux capabilities.
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

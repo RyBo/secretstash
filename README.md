@@ -23,6 +23,7 @@
 - [REST API](#rest-api)
 - [CLI](#cli)
 - [Security model](#security-model)
+- [Deployment](#deployment)
 - [Development](#development)
 
 ## What is secretstash?
@@ -173,9 +174,126 @@ Exit codes: `0` ok, `1` error, `2` usage, `3` consumed/expired/revoked,
 - Failed and repeated unwrap attempts are rate limited per IP and logged as
   structured audit events containing a token-hash prefix, never the token.
 
+## Deployment
+
+A reminder before you read on: the notice at the top of this file still
+applies. None of the steps below turn an unaudited toy into production-grade
+infrastructure. They just describe how to run it with real certificates if you
+have decided the trade-offs are acceptable for your use.
+
+### Docker
+
+```sh
+make docker-build                       # builds secretstash:latest (and :VERSION)
+docker run --rm -p 8200:8200 secretstash:latest   # ephemeral self-signed TLS
+```
+
+The image is a `distroless/static:nonroot` base over a static binary (no shell,
+no package manager). It listens on `0.0.0.0:8200` inside the container; map the
+port with `-p`. Append flags after the image name to override the defaults, for
+example `docker run ... secretstash:latest server --listen 0.0.0.0:8200 --no-metrics`.
+
+### Production with real certificates (native TLS)
+
+secretstash can terminate TLS itself. Point it at a real certificate and key and
+it serves trusted HTTPS directly, no proxy required.
+
+1. Obtain a certificate. With [certbot](https://certbot.eff.org/) and a public
+   DNS name:
+
+   ```sh
+   certbot certonly --standalone -d secrets.example.com
+   # writes /etc/letsencrypt/live/secrets.example.com/{fullchain,privkey}.pem
+   ```
+
+2. Make the cert and key available to the container and start it. The included
+   `docker-compose.yml` mounts `./certs` read-only and passes the flags for you:
+
+   ```sh
+   mkdir certs
+   cp /etc/letsencrypt/live/secrets.example.com/fullchain.pem certs/
+   cp /etc/letsencrypt/live/secrets.example.com/privkey.pem   certs/
+   docker compose up -d
+   ```
+
+   The startup banner should read `TLS enabled with /certs/fullchain.pem`.
+
+   Equivalent without compose:
+
+   ```sh
+   docker run -d -p 443:8200 -v "$PWD/certs:/certs:ro" secretstash:latest \
+     server --listen 0.0.0.0:8200 \
+     --tls-cert /certs/fullchain.pem --tls-key /certs/privkey.pem
+   ```
+
+   Or run the bare binary on a host with `--tls-cert`/`--tls-key`.
+
+**Renewal.** secretstash reads the certificate once at startup, so a renewed
+cert only takes effect after a restart. Add a certbot deploy hook to copy the
+new files and bounce the container:
+
+```sh
+certbot renew --deploy-hook 'cp /etc/letsencrypt/live/secrets.example.com/*.pem /srv/secretstash/certs/ && docker compose -f /srv/secretstash/docker-compose.yml restart secretstash'
+```
+
+A restart wipes all live secrets, which is true of every restart here: storage
+is in-memory by design (see [How it works](#how-it-works)), so renewal causes no
+extra data loss.
+
+### Reverse proxy with automatic certificates (Caddy)
+
+If you would rather have the proxy manage certs (automatic issuance and
+renewal), put [Caddy](https://caddyserver.com/) in front. Keep secretstash in
+its normal TLS mode (the ephemeral self-signed cert) so the internal hop stays
+encrypted, and tell Caddy to skip verification on that hop.
+
+`docker-compose.yml`:
+
+```yaml
+services:
+  secretstash:
+    image: secretstash:latest
+    command: [server, --listen=0.0.0.0:8200, --trust-proxy]
+    expose: ["8200"]            # internal only; not published to the host
+
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data        # persists issued certificates
+
+volumes:
+  caddy_data:
+```
+
+`Caddyfile`:
+
+```caddyfile
+secrets.example.com {
+	reverse_proxy https://secretstash:8200 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+}
+```
+
+`--trust-proxy` makes secretstash read `X-Forwarded-For` so per-IP rate
+limiting and audit logs reflect real client addresses rather than the proxy's.
+Caddy obtains and renews the public certificate automatically.
+
+### A note on /metrics
+
+The `/metrics` endpoint is unauthenticated and not rate limited. In any
+internet-facing deployment, block it at the firewall or proxy (Caddy: a
+`@metrics path /metrics` matcher returning `respond 403`), or disable it with
+`--no-metrics`.
+
 ## Development
 
 ```sh
+make help    # list all targets
 make test    # go test -race ./...
 make check   # vet + govulncheck (if installed) + tests
 make run-dev # plain-HTTP dev server

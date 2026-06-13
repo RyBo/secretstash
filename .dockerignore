@@ -1,0 +1,15 @@
+# Trim the build context. The Dockerfile only needs go.mod, main.go, and
+# internal/ (including the embedded internal/web/static assets); exclude the
+# rest so it never bloats the context or busts the build cache.
+.git/
+.github/
+.gitignore
+.dockerignore
+Dockerfile
+docker-compose.yml
+Makefile
+*.md
+bin/
+dist/
+certs/
+**/*_test.go
