@@ -29,9 +29,11 @@ document.addEventListener("click", (e) => {
   if (!id) return;
   const el = $(id);
   navigator.clipboard.writeText(el.value ?? el.textContent).then(() => {
-    const prev = e.target.textContent;
-    e.target.textContent = "Copied!";
-    setTimeout(() => { e.target.textContent = prev; }, 1200);
+    const btn = e.target;
+    const prev = btn.textContent;
+    btn.textContent = "Copied ✓";
+    btn.classList.add("copied");
+    setTimeout(() => { btn.textContent = prev; btn.classList.remove("copied"); }, 1200);
   });
 });
 
