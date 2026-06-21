@@ -25,8 +25,8 @@ type Config struct {
 	TLSCert        string
 	TLSKey         string
 	Dev            bool // plain HTTP
-	DevAllowRemote bool // allow --dev on non-loopback listen
-	TrustProxy     bool
+	DevAllowRemote bool   // allow --dev on non-loopback listen
+	RealIPHeader   string // proxy-set header carrying the real client IP
 	NoUI           bool
 	NoMetrics      bool   // disable the /metrics endpoint
 	ShareBaseURL   string // override external URL in share links
@@ -59,7 +59,7 @@ func Run(cfg Config) error {
 		cfg.ShareBaseURL = scheme + "://" + cfg.Listen
 	}
 	cfg.API.ShareBaseURL = strings.TrimRight(cfg.ShareBaseURL, "/")
-	api.TrustProxy = cfg.TrustProxy
+	api.RealIPHeader = cfg.RealIPHeader
 
 	st := store.New(cfg.Limits)
 	a := api.New(st, cfg.API, logger)
