@@ -18,6 +18,14 @@ jobs:
         with:
           go-version-file: go.mod
           check-latest: true
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "These files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
       - name: go vet
         run: go vet ./...
       - name: build

@@ -149,8 +149,8 @@ func TestUsageErrors(t *testing.T) {
 	for _, args := range [][]string{
 		{},
 		{"bogus-command"},
-		{"unwrap"},          // missing token
-		{"wrap", "a", "b"},  // too many args
+		{"unwrap"},         // missing token
+		{"wrap", "a", "b"}, // too many args
 	} {
 		var out, errBuf bytes.Buffer
 		devnull, _ := os.Open(os.DevNull)
