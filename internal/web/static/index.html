@@ -7,6 +7,15 @@
 <title>secretstash: share a secret</title><link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<header class="topbar">
+  <button id="about-open" class="iconbtn" type="button" aria-haspopup="dialog">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm-1-12h2v2h-2V8zm0 4h2v6h-2v-6z"/></svg>
+    About
+  </button>
+  <a class="iconbtn" href="https://github.com/RyBo/secretstash" target="_blank" rel="noopener noreferrer" aria-label="View source on GitHub">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+  </a>
+</header>
 <main>
   <h1 class="brand"><a href="/" aria-label="secretstash"><span class="word">secret<span class="accent">stash</span></span></a></h1>
   <p class="tagline">Share a secret with a one-time link. It self-destructs after it's read.</p>
@@ -56,6 +65,16 @@
     <button id="again" class="secondary">Share another secret</button>
   </div>
 </main>
+
+<dialog id="about" class="about">
+  <h2>How it works</h2>
+  <p>secretstash makes a one-time link for a secret. The link works for the number of reads you pick, then the secret is deleted for good. It also expires after the time you set.</p>
+  <p>The token that unlocks the secret lives in the part of the link after the <code>#</code>. Browsers never send that part to the server, so it stays out of server logs and link previews. The server only keeps a hashed form of the token, so it cannot read your secret or rebuild a link once it has been shown.</p>
+  <p>Secrets are kept in memory only. Restarting the server erases all of them.</p>
+  <p>Built in Go. The full source is on <a href="https://github.com/RyBo/secretstash" target="_blank" rel="noopener noreferrer">GitHub</a> if you want to check it yourself.</p>
+  <button id="about-close" class="secondary" type="button">Close</button>
+</dialog>
+
 <script src="/static/app.js"></script>
 </body>
 </html>

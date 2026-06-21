@@ -186,6 +186,78 @@ pre.secret {
 .meta { color: var(--muted); font-size: 0.85rem; }
 .error-detail { color: var(--danger); }
 
+/* --- top header bar --- */
+
+.topbar {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.85rem 1rem 0;
+}
+
+.iconbtn {
+  margin: 0;
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.35rem 0.55rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  box-shadow: none;
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.iconbtn:hover {
+  color: var(--accent-bright);
+  border-color: var(--border-hi);
+  background: var(--panel-hi);
+  filter: none;
+  box-shadow: none;
+}
+.iconbtn svg { width: 1.1rem; height: 1.1rem; fill: currentColor; flex: none; }
+
+/* --- about dialog --- */
+
+dialog.about {
+  max-width: 440px;
+  width: calc(100% - 2rem);
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 1.5rem;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .03);
+}
+dialog.about::backdrop { background: rgba(0, 0, 0, .6); }
+dialog.about h2 {
+  margin: 0 0 0.9rem;
+  font-family: var(--mono);
+  font-size: 1.1rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+dialog.about p { margin: 0 0 0.85rem; font-size: 0.9rem; color: var(--text); }
+dialog.about code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+}
+dialog.about a { color: var(--accent-bright); text-decoration: none; }
+dialog.about a:hover { text-decoration: underline; }
+dialog.about button { margin-top: 0.5rem; }
+
 @media (prefers-reduced-motion: reduce) {
   .panel { animation: none; }
   * { transition: none !important; }

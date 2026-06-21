@@ -37,6 +37,15 @@ document.addEventListener("click", (e) => {
   });
 });
 
+// --- about dialog (both pages) ---
+
+const about = $("about");
+if (about) {
+  $("about-open")?.addEventListener("click", () => about.showModal());
+  $("about-close")?.addEventListener("click", () => about.close());
+  about.addEventListener("click", (e) => { if (e.target === about) about.close(); });
+}
+
 // --- create flow (index.html) ---
 
 if ($("wrap")) {
