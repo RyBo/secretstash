@@ -7,6 +7,8 @@
 
 **One-time self-destructing secret links, with tamper evidence built in.**
 
+[![CI](https://github.com/RyBo/secretstash/actions/workflows/ci.yml/badge.svg)](https://github.com/RyBo/secretstash/actions/workflows/ci.yml)
+
 > ⚠️ **Heads up: this project was completely vibe coded** in one sitting. A
 > language model wrote it while a human nodded along and said "looks good".
 > It has tests, the crypto is boring stdlib AES-GCM, and it still owes you
