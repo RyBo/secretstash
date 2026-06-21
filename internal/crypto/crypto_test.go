@@ -101,9 +101,9 @@ func TestParseTokenRejects(t *testing.T) {
 		"",
 		"ss.",
 		"nope",
-		token[:len(token)-1],          // truncated
-		token + "A",                   // too long
-		"hvs." + token[len("ss."):],   // wrong prefix
+		token[:len(token)-1],            // truncated
+		token + "A",                     // too long
+		"hvs." + token[len("ss."):],     // wrong prefix
 		"ss." + strings.Repeat("!", 43), // bad alphabet
 	} {
 		if _, err := ParseToken(bad); err != ErrBadToken {

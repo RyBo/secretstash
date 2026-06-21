@@ -188,11 +188,11 @@ func TestUnknownAndMalformedTokens(t *testing.T) {
 func TestValidationRejects(t *testing.T) {
 	e := newEnv(t, Config{})
 	for name, body := range map[string]string{
-		"empty secret":  `{"secret":""}`,
-		"bad json":      `{`,
-		"bad ttl":       `{"secret":"x","ttl":"tomorrow"}`,
-		"ttl too long":  `{"secret":"x","ttl":"2000h"}`,
-		"ttl too short": `{"secret":"x","ttl":"1s"}`,
+		"empty secret":   `{"secret":""}`,
+		"bad json":       `{`,
+		"bad ttl":        `{"secret":"x","ttl":"tomorrow"}`,
+		"ttl too long":   `{"secret":"x","ttl":"2000h"}`,
+		"ttl too short":  `{"secret":"x","ttl":"1s"}`,
 		"reads negative": `{"secret":"x","reads":-1}`,
 		"reads too high": `{"secret":"x","reads":1000}`,
 	} {

@@ -24,7 +24,7 @@ type Config struct {
 	Listen         string // default 127.0.0.1:8200
 	TLSCert        string
 	TLSKey         string
-	Dev            bool // plain HTTP
+	Dev            bool   // plain HTTP
 	DevAllowRemote bool   // allow --dev on non-loopback listen
 	RealIPHeader   string // proxy-set header carrying the real client IP
 	NoUI           bool

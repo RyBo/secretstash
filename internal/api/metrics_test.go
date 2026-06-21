@@ -73,8 +73,8 @@ func TestMetricsCountsPeekAndAuthFail(t *testing.T) {
 	_, b := e.wrap(t, `{"secret":"x"}`)
 	token := b["token"].(string)
 
-	e.do(t, "GET", "/v1/peek", token)         // live peek -> counted
-	e.do(t, "POST", "/v1/unwrap", "garbage")  // unparseable token -> auth_fail
+	e.do(t, "GET", "/v1/peek", token)        // live peek -> counted
+	e.do(t, "POST", "/v1/unwrap", "garbage") // unparseable token -> auth_fail
 
 	body, _ := e.scrape(t)
 	mustContain(t, body, "secretstash_peeks_total 1")
