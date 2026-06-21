@@ -6,9 +6,12 @@ import (
 	"strings"
 )
 
-// TrustProxy controls whether remoteIP honors X-Forwarded-For. Set once at
-// startup (--trust-proxy) before the server starts serving.
-var TrustProxy bool
+// RealIPHeader, when non-empty, names a header set by a trusted reverse proxy
+// that carries the real client IP (e.g. "CF-Connecting-IP", "X-Real-IP"). Set
+// once at startup before the server starts serving. Only safe when the origin
+// is reachable ONLY through that proxy, so clients cannot supply the header
+// themselves.
+var RealIPHeader string
 
 // Recover turns handler panics into a bare 500 with no stack leakage.
 func Recover(log interface{ Error(string, ...any) }) func(http.Handler) http.Handler {
@@ -76,16 +79,25 @@ func (a *API) rateLimit(next http.Handler) http.Handler {
 	})
 }
 
-// remoteIP returns the caller's IP, honoring the first hop of
-// X-Forwarded-For only when TrustProxy is enabled.
+// remoteIP returns the caller's IP. When RealIPHeader is configured it reads
+// the client IP from that proxy-set header; otherwise it uses the socket
+// address.
 func remoteIP(r *http.Request) string {
-	if TrustProxy {
-		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			first, _, _ := strings.Cut(xff, ",")
-			if ip := strings.TrimSpace(first); ip != "" {
-				return ip
+	if RealIPHeader != "" {
+		if v := r.Header.Get(RealIPHeader); v != "" {
+			// Rightmost token: for a list header (X-Forwarded-For) the nearest
+			// trusted proxy appends the client last, so a client-supplied first
+			// hop cannot be spoofed in; for a single-value header
+			// (CF-Connecting-IP) this is just the value.
+			if i := strings.LastIndex(v, ","); i >= 0 {
+				v = v[i+1:]
+			}
+			if ip := net.ParseIP(strings.TrimSpace(v)); ip != nil {
+				return ip.String()
 			}
 		}
+		// Header missing or unparseable: fall through to the socket address
+		// rather than trusting garbage (fails closed to the proxy/tunnel IP).
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {

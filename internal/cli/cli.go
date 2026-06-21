@@ -89,7 +89,8 @@ func cmdServer(args []string, stderr io.Writer) int {
 	fs.StringVar(&cfg.TLSKey, "tls-key", "", "TLS private key file (with -tls-cert)")
 	fs.BoolVar(&cfg.Dev, "dev", false, "serve plaintext HTTP (development only)")
 	fs.BoolVar(&cfg.DevAllowRemote, "dev-allow-remote", false, "allow -dev on a non-loopback address")
-	fs.BoolVar(&cfg.TrustProxy, "trust-proxy", false, "trust X-Forwarded-For from a reverse proxy")
+	fs.StringVar(&cfg.RealIPHeader, "real-ip-header", "", "trust this proxy-set header for the client IP, e.g. CF-Connecting-IP (only when the origin is reachable solely via that proxy)")
+	trustProxy := fs.Bool("trust-proxy", false, "deprecated: alias for -real-ip-header X-Forwarded-For")
 	fs.BoolVar(&cfg.NoUI, "no-ui", false, "disable the web UI")
 	fs.BoolVar(&cfg.NoMetrics, "no-metrics", false, "disable the /metrics endpoint")
 	fs.StringVar(&cfg.ShareBaseURL, "share-base-url", "", "external base URL used in share links (default derived from listen address)")
@@ -102,6 +103,14 @@ func cmdServer(args []string, stderr io.Writer) int {
 
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
+	}
+
+	// -trust-proxy is a deprecated alias: it now trusts X-Forwarded-For via the
+	// same safe (rightmost-hop) path as -real-ip-header, replacing the old
+	// spoofable first-hop logic.
+	if *trustProxy && cfg.RealIPHeader == "" {
+		cfg.RealIPHeader = "X-Forwarded-For"
+		fmt.Fprintln(stderr, "warning: -trust-proxy is deprecated; use -real-ip-header X-Forwarded-For (or CF-Connecting-IP behind Cloudflare)")
 	}
 
 	cfg.API = api.Config{

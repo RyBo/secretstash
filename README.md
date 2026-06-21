@@ -146,7 +146,7 @@ Disable it entirely with `--no-metrics`.
 secretstash server   [--listen 127.0.0.1:8200] [--tls-cert F --tls-key F | --dev]
                      [--max-secret-size 65536] [--max-secrets 10000]
                      [--default-ttl 24h] [--max-ttl 168h] [--max-reads 100]
-                     [--trust-proxy] [--no-ui] [--no-metrics] [--share-base-url URL]
+                     [--real-ip-header NAME] [--no-ui] [--no-metrics] [--share-base-url URL]
 secretstash wrap     [--ttl 30m] [--reads 1] [secret]     # or pipe via stdin
 secretstash unwrap   <token>     # secret to stdout, metadata to stderr (pipe-safe)
 secretstash peek     <token>     # metadata, does not consume a read
@@ -173,6 +173,15 @@ Exit codes: `0` ok, `1` error, `2` usage, `3` consumed/expired/revoked,
   ever retains ciphertext and token hashes.
 - Failed and repeated unwrap attempts are rate limited per IP and logged as
   structured audit events containing a token-hash prefix, never the token.
+- Behind a reverse proxy or tunnel every request arrives from the proxy's
+  address, which would collapse per-IP rate limiting into one shared bucket
+  (one fumbled link could lock everyone out). Set `--real-ip-header` to the
+  header your proxy populates with the real client IP (`CF-Connecting-IP` for
+  Cloudflare, `X-Forwarded-For` for Caddy/nginx) so each client is limited
+  independently. Only enable it when the origin is reachable *solely* through
+  that proxy: otherwise a client could forge the header. secretstash trusts the
+  rightmost address in the header, the hop your proxy appends, so a
+  client-supplied value cannot spoof it.
 
 ## Deployment
 
@@ -180,6 +189,43 @@ A reminder before you read on: the notice at the top of this file still
 applies. None of the steps below turn an unaudited toy into production-grade
 infrastructure. They just describe how to run it with real certificates if you
 have decided the trade-offs are acceptable for your use.
+
+### Running behind a reverse proxy or tunnel
+
+Whenever something sits in front of secretstash (a reverse proxy, load balancer,
+or tunnel), every request arrives from that intermediary's address rather than
+the visitor's. Per-IP rate limiting then collapses into a single shared bucket,
+so one person fumbling a link can lock everyone out. Set `--real-ip-header` to
+the header your proxy populates with the real client IP and each client is
+limited independently. secretstash trusts the rightmost address in that header
+(the hop the nearest proxy appends), so a client-supplied value cannot spoof it.
+
+This is only safe when the origin is reachable *solely* through that proxy. If
+anyone can connect to secretstash directly, they can forge the header and defeat
+rate limiting (or frame another client). So with `--real-ip-header` set:
+
+- Bind the origin to loopback (`--listen 127.0.0.1:8200`) or an internal-only
+  network, and never publish the port to the host or the internet.
+- Make sure the proxy itself overwrites or appends the header rather than
+  passing a client-supplied one through untouched.
+
+Without `--real-ip-header`, secretstash always uses the connection's socket
+address and ignores forwarding headers entirely, which is the safe default when
+nothing trusted sits in front of it. The vendor-specific sections below show
+which header name to use for each setup.
+
+For example, behind a Cloudflare Tunnel (Cloudflare overwrites `CF-Connecting-IP`
+on every request, and `cloudflared` reaches the origin over loopback only):
+
+```sh
+secretstash server --listen 127.0.0.1:8200 --real-ip-header CF-Connecting-IP
+```
+
+The same shape applies to other front ends, just with their header: Caddy or
+nginx append `X-Forwarded-For`, so you would use `--real-ip-header X-Forwarded-For`.
+See [Cloudflare Tunnel](#cloudflare-tunnel) and
+[Reverse proxy with automatic certificates (Caddy)](#reverse-proxy-with-automatic-certificates-caddy)
+below for the full recipes.
 
 ### Docker
 
@@ -253,7 +299,7 @@ encrypted, and tell Caddy to skip verification on that hop.
 services:
   secretstash:
     image: secretstash:latest
-    command: [server, --listen=0.0.0.0:8200, --trust-proxy]
+    command: [server, --listen=0.0.0.0:8200, --real-ip-header=X-Forwarded-For]
     expose: ["8200"]            # internal only; not published to the host
 
   caddy:
@@ -279,9 +325,69 @@ secrets.example.com {
 }
 ```
 
-`--trust-proxy` makes secretstash read `X-Forwarded-For` so per-IP rate
-limiting and audit logs reflect real client addresses rather than the proxy's.
-Caddy obtains and renews the public certificate automatically.
+`--real-ip-header=X-Forwarded-For` makes secretstash read the real client
+address from the header Caddy appends, so per-IP rate limiting and audit logs
+reflect real clients rather than the proxy. Because Caddy is the only thing that
+can reach the `expose`d port, the header cannot be forged. Caddy obtains and
+renews the public certificate automatically. (`--trust-proxy` is a deprecated
+alias for `--real-ip-header=X-Forwarded-For`.)
+
+### Cloudflare Tunnel
+
+A [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+is the easiest way to share secretstash with friends and family: Cloudflare
+issues and renews the public certificate, terminates TLS at its edge, and
+reaches your origin through an outbound-only `cloudflared` connection, so you
+never open a port to the internet.
+
+Because `cloudflared` dials the origin over localhost, every request reaches
+secretstash from `127.0.0.1`. Set `--real-ip-header=CF-Connecting-IP` so per-IP
+rate limiting keys on the real visitor (Cloudflare overwrites that header on
+every request, so clients cannot forge it) rather than collapsing every visitor
+into one shared bucket.
+
+Run the origin bound to loopback and never publish the port. Loopback-only is
+exactly what keeps `CF-Connecting-IP` trustworthy: if the origin were reachable
+directly, an attacker could send the header themselves.
+
+```sh
+secretstash server --listen 127.0.0.1:8200 --dev --real-ip-header CF-Connecting-IP --no-metrics
+```
+
+`--no-metrics` keeps the unauthenticated `/metrics` endpoint off the public
+hostname (see [A note on /metrics](#a-note-on-metrics); alternatively block the
+path with a Cloudflare WAF rule). `--dev` serves plain HTTP on loopback (Cloudflare provides the public HTTPS).
+secretstash refuses `--dev` on a non-loopback address, which is the guard that
+keeps you from accidentally exposing plaintext. To keep the localhost hop
+encrypted instead, drop `--dev` (secretstash serves its ephemeral self-signed
+cert) and add `originRequest.noTLSVerify: true` to the ingress rule below.
+
+Minimal `cloudflared` `config.yml`:
+
+```yaml
+tunnel: <your-tunnel-id>
+credentials-file: /root/.cloudflared/<your-tunnel-id>.json
+
+ingress:
+  - hostname: secrets.example.com
+    service: http://127.0.0.1:8200    # https:// + noTLSVerify if not using --dev
+  - service: http_status:404
+```
+
+```sh
+cloudflared tunnel route dns <your-tunnel-id> secrets.example.com
+cloudflared tunnel run <your-tunnel-id>
+```
+
+**Edge rate limiting (defense in depth).** Add a Cloudflare *Rate Limiting* rule
+on the hostname (Security -> WAF -> Rate limiting rules) so abuse is dropped at
+the edge before it reaches the tunnel, for example matching
+`http.request.uri.path contains "/v1/"` and limiting to ~30 requests/minute per
+client IP. This complements, and does not replace, the app-level limiter.
+
+A reminder that applies to every deployment here: storage is in-memory by
+design, so restarting `secretstash` (updates, host reboots) destroys all live
+secrets.
 
 ### A note on /metrics
 
