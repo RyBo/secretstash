@@ -44,9 +44,13 @@ test("rejects too few shares and corrupted shares", async () => {
   const shares = await split(bytes("hello shamir!!"), 5, 3);
   await assert.rejects(() => combine(shares.slice(0, 2)), /not enough shares/);
 
-  // Flip a character in one share's body so its checksum no longer matches.
-  const tampered = shares[0].slice(0, -1) + (shares[0].endsWith("A") ? "B" : "A");
-  await assert.rejects(() => combine([tampered, shares[1], shares[2]]), /checksum/);
+  // Corrupt the first body byte so the checksum no longer matches. We change
+  // the first base64 char of the body, which carries real data bits; the last
+  // char's low bits are encoding padding and flipping them can be a no-op.
+  const parts = shares[0].split(".");
+  const body = parts[parts.length - 1];
+  parts[parts.length - 1] = (body[0] === "A" ? "B" : "A") + body.slice(1);
+  await assert.rejects(() => combine([parts.join("."), shares[1], shares[2]]), /checksum/);
 
   await assert.rejects(() => combine(["garbage", shares[1], shares[2]]), /malformed/);
 });

@@ -122,14 +122,14 @@ explicit click; loading the page never consumes a read.
 
 ## Splitting a secret across people (Shamir's Secret Sharing)
 
-Sometimes one secret should require *several* people to unlock — a 3-of-5
-break-glass for a root credential, say. secretstash can split a secret into
+Sometimes one secret should require *several* people to unlock, like a 3-of-5
+break-glass for a root credential. secretstash can split a secret into
 N shares where any K (the quorum) reconstruct it and any K-1 reveal nothing.
 
 The trick is that the token is *already* the one thing that unlocks a secret,
-and it's already 256 bits of high-entropy key material — exactly what Shamir's
-Secret Sharing is built to split. So secretstash splits the **token**, not the
-secret, and does it **entirely on the client**:
+and it's already 256 bits of high-entropy key material, which is exactly what
+Shamir's Secret Sharing is built to split. So secretstash splits the **token**,
+not the secret, and does it **entirely on the client**:
 
 ```
 $ secretstash wrap --shares 5 --threshold 3 "root db password"
@@ -149,7 +149,7 @@ The web UI mirrors this: tick "Split into shares" on the create page, and use
 in the browser via the same scheme.
 
 Because reconstruction is client-side, **the server is completely unaware that
-sharing exists** — no new endpoint, no protocol change. It still stores one
+sharing exists**: no new endpoint, no protocol change. It still stores one
 ciphertext keyed by the token hash and still can't decrypt anything on its own.
 A reconstructed token is byte-identical to the original, so reads, expiry,
 revoke, and tamper-evidence all behave exactly as for a normal token.
@@ -160,7 +160,7 @@ than silently rebuilding the wrong token.
 
 What this is *not*: the server does **not** collect shares or enforce a quorum.
 It only ever sees a final reconstructed token, indistinguishable from any other.
-Doing it the other way — submitting shares to the server to combine — would let
+Doing it the other way, submitting shares to the server to combine, would let
 the server decrypt and would force it to hold partial shares across requests,
 breaking the zero-knowledge, stateless-token design. The threshold guarantee is
 Shamir's math (K-1 shares reveal nothing) plus distributing shares to distinct
@@ -220,7 +220,7 @@ Exit codes: `0` ok, `1` error, `2` usage, `3` consumed/expired/revoked,
   secret (once). Send share links over channels you trust.
 - Shamir shares split *custody* of that token across people: any K
   reconstruct it, any K-1 reveal nothing (information-theoretically). This is
-  a client-side, mathematical guarantee — the server never sees shares and
+  a client-side, mathematical guarantee: the server never sees shares and
   cannot enforce a quorum, and anyone who gathers K shares can reconstruct
   and read the secret alone.
 - Tokens have 256 bits of `crypto/rand` entropy. Brute force is the actual
