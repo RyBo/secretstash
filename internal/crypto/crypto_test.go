@@ -115,6 +115,28 @@ func TestParseTokenRejects(t *testing.T) {
 	}
 }
 
+func TestEncodeTokenRoundTrip(t *testing.T) {
+	token, raw, err := NewToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// EncodeToken is the inverse of ParseToken: raw -> canonical string.
+	got, err := EncodeToken(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != token {
+		t.Fatalf("EncodeToken(raw) = %q, want %q", got, token)
+	}
+	reparsed, err := ParseToken(got)
+	if err != nil || !bytes.Equal(reparsed, raw) {
+		t.Fatalf("re-parse mismatch: %v", err)
+	}
+	if _, err := EncodeToken(raw[:len(raw)-1]); err != ErrBadToken {
+		t.Fatalf("short raw: want ErrBadToken, got %v", err)
+	}
+}
+
 func TestLookupIDDeterministicAndDistinct(t *testing.T) {
 	_, raw1, _ := NewToken()
 	_, raw2, _ := NewToken()

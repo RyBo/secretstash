@@ -11,7 +11,19 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/rybo/secretstash/internal/crypto"
+	"github.com/rybo/secretstash/internal/shamir"
 )
+
+// stringList collects a repeatable string flag (used by combine's --share).
+type stringList []string
+
+func (s *stringList) String() string { return strings.Join(*s, ",") }
+func (s *stringList) Set(v string) error {
+	*s = append(*s, v)
+	return nil
+}
 
 const defaultAddr = "https://127.0.0.1:8200"
 
@@ -102,7 +114,16 @@ func cmdWrap(args []string, stdout, stderr io.Writer, stdin *os.File) int {
 	cf := addClientFlags(fs)
 	ttl := fs.String("ttl", "", "time-to-live, e.g. 30m, 24h (default: server default)")
 	reads := fs.Int("reads", 1, "number of reads before the secret self-destructs")
+	shares := fs.Int("shares", 0, "split the token into this many Shamir shares (with --threshold)")
+	threshold := fs.Int("threshold", 0, "shares required to reconstruct (quorum); needs --shares")
 	if err := fs.Parse(args); err != nil {
+		return ExitUsage
+	}
+
+	// Split mode is opt-in: validate the quorum locally before doing any work.
+	splitMode := *shares != 0 || *threshold != 0
+	if splitMode && (*shares < 2 || *threshold < 2 || *threshold > *shares || *shares > 255) {
+		fmt.Fprintln(stderr, "error: --shares and --threshold must satisfy 2 <= threshold <= shares <= 255")
 		return ExitUsage
 	}
 
@@ -145,7 +166,7 @@ func cmdWrap(args []string, stdout, stderr io.Writer, stdin *os.File) int {
 	if status != http.StatusOK {
 		return goneExit(stderr, status, body)
 	}
-	if cf.jsonOut {
+	if cf.jsonOut && !splitMode {
 		stdout.Write(body)
 		return ExitOK
 	}
@@ -159,11 +180,56 @@ func cmdWrap(args []string, stdout, stderr io.Writer, stdin *os.File) int {
 		fmt.Fprintln(stderr, "error: bad server response:", err)
 		return ExitError
 	}
+
+	if splitMode {
+		return printShares(stdout, stderr, resp.Token, *shares, *threshold, resp.Reads, resp.ExpiresAt, cf.jsonOut)
+	}
+
 	fmt.Fprintln(stdout, "token:     "+resp.Token)
 	if resp.ShareURL != "" {
 		fmt.Fprintln(stdout, "share url: "+resp.ShareURL)
 	}
 	fmt.Fprintf(stdout, "reads:     %d\nexpires:   %s\n", resp.Reads, resp.ExpiresAt.Local().Format(time.RFC3339))
+	return ExitOK
+}
+
+// printShares splits the wrap token into n Shamir shares client-side and prints
+// them in place of the single token. The whole token and the single-link share
+// URL are deliberately suppressed: either one alone would defeat the split.
+func printShares(stdout, stderr io.Writer, token string, n, k, reads int, expires time.Time, jsonOut bool) int {
+	raw, err := crypto.ParseToken(token)
+	if err != nil {
+		fmt.Fprintln(stderr, "error: bad server response:", err)
+		return ExitError
+	}
+	parts, err := shamir.Split(raw, n, k)
+	crypto.Wipe(raw)
+	if err != nil {
+		fmt.Fprintln(stderr, "error: splitting token:", err)
+		return ExitError
+	}
+
+	if jsonOut {
+		out, err := json.Marshal(struct {
+			Shares    []string  `json:"shares"`
+			Threshold int       `json:"threshold"`
+			Reads     int       `json:"reads"`
+			ExpiresAt time.Time `json:"expires_at"`
+		}{parts, k, reads, expires})
+		if err != nil {
+			fmt.Fprintln(stderr, "error:", err)
+			return ExitError
+		}
+		stdout.Write(out)
+		return ExitOK
+	}
+
+	fmt.Fprintf(stdout, "shares (%d of %d required to reconstruct):\n", k, n)
+	for _, s := range parts {
+		fmt.Fprintln(stdout, "  "+s)
+	}
+	fmt.Fprintf(stdout, "reads:     %d\nexpires:   %s\n", reads, expires.Local().Format(time.RFC3339))
+	fmt.Fprintf(stdout, "\nany %d reconstruct with:  secretstash combine <share> <share> ...\n", k)
 	return ExitOK
 }
 
@@ -178,8 +244,14 @@ func cmdUnwrap(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "usage: secretstash unwrap <token>")
 		return ExitUsage
 	}
+	return unwrapWithToken(cf, fs.Arg(0), stdout, stderr)
+}
 
-	status, body, err := cf.call(stderr, "POST", "/v1/unwrap", fs.Arg(0), nil)
+// unwrapWithToken consumes one read for token and prints the secret. It is the
+// shared tail of unwrap and combine: combine reconstructs a token from shares,
+// then hands it here so both commands behave identically.
+func unwrapWithToken(cf *clientFlags, token string, stdout, stderr io.Writer) int {
+	status, body, err := cf.call(stderr, "POST", "/v1/unwrap", token, nil)
 	if err != nil {
 		fmt.Fprintln(stderr, "error:", err)
 		return ExitError
@@ -207,6 +279,44 @@ func cmdUnwrap(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "\nfinal read, the secret is now destroyed")
 	}
 	return ExitOK
+}
+
+func cmdCombine(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("combine", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	cf := addClientFlags(fs)
+	var shareFlags stringList
+	fs.Var(&shareFlags, "share", "a share string (repeatable); shares may also be positional args")
+	printToken := fs.Bool("print-token", false, "print the reconstructed token instead of unwrapping the secret")
+	if err := fs.Parse(args); err != nil {
+		return ExitUsage
+	}
+
+	shares := append([]string(shareFlags), fs.Args()...)
+	if len(shares) < 2 {
+		fmt.Fprintln(stderr, "usage: secretstash combine <share> <share> [share...]  (or repeat --share)")
+		return ExitUsage
+	}
+
+	// Reconstruct entirely client-side. A bad/insufficient/corrupted set of
+	// shares fails here, before any request reaches the server.
+	raw, err := shamir.Combine(shares)
+	if err != nil {
+		fmt.Fprintln(stderr, "error:", err)
+		return ExitUsage
+	}
+	token, err := crypto.EncodeToken(raw)
+	crypto.Wipe(raw)
+	if err != nil {
+		fmt.Fprintln(stderr, "error: reconstructed token is invalid:", err)
+		return ExitError
+	}
+
+	if *printToken {
+		fmt.Fprintln(stdout, token)
+		return ExitOK
+	}
+	return unwrapWithToken(cf, token, stdout, stderr)
 }
 
 func cmdPeek(args []string, stdout, stderr io.Writer) int {

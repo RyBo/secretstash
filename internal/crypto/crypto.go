@@ -66,6 +66,16 @@ func ParseToken(token string) ([]byte, error) {
 	return raw, nil
 }
 
+// EncodeToken is the inverse of ParseToken: it renders raw token bytes back to
+// the "ss." + base64url form. It lets callers that reconstruct a token from its
+// raw bytes (e.g. after combining Shamir shares) rebuild the canonical string.
+func EncodeToken(raw []byte) (string, error) {
+	if len(raw) != tokenBytes {
+		return "", ErrBadToken
+	}
+	return TokenPrefix + tokenEncoder.EncodeToString(raw), nil
+}
+
 // LookupID derives the storage key from raw token bytes. The token has 256
 // bits of entropy, so SHA-256 preimage resistance makes the hash safe to
 // store, and the map lookup itself serves as the auth check, so there is no

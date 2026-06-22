@@ -9,13 +9,16 @@ import (
 //go:embed static
 var assets embed.FS
 
-// Handler serves the create page at /, the unwrap page at /s, and static
-// assets. The unwrap token rides in the URL fragment, so requests for /s
-// carry no secret material.
+// Handler serves the create page at /, the reveal page at /s and /unwrap, the
+// share-combine page at /combine, and static assets. Reveal tokens ride in the
+// URL fragment or are pasted client-side, and Shamir shares are pasted
+// client-side, so none of these requests carry secret material.
 func Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", servePage("static/index.html"))
-	mux.HandleFunc("GET /s", servePage("static/s.html"))
+	mux.HandleFunc("GET /s", servePage("static/unwrap.html"))
+	mux.HandleFunc("GET /unwrap", servePage("static/unwrap.html"))
+	mux.HandleFunc("GET /combine", servePage("static/combine.html"))
 	mux.HandleFunc("GET /static/", func(w http.ResponseWriter, r *http.Request) {
 		http.FileServerFS(assets).ServeHTTP(w, r)
 	})

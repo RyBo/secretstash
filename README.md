@@ -120,6 +120,52 @@ browsers never send to any server, so nothing leaks into access logs or
 link-preview fetchers. Revealing a secret in the browser requires an
 explicit click; loading the page never consumes a read.
 
+## Splitting a secret across people (Shamir's Secret Sharing)
+
+Sometimes one secret should require *several* people to unlock, like a 3-of-5
+break-glass for a root credential. secretstash can split a secret into
+N shares where any K (the quorum) reconstruct it and any K-1 reveal nothing.
+
+The trick is that the token is *already* the one thing that unlocks a secret,
+and it's already 256 bits of high-entropy key material, which is exactly what
+Shamir's Secret Sharing is built to split. So secretstash splits the **token**,
+not the secret, and does it **entirely on the client**:
+
+```
+$ secretstash wrap --shares 5 --threshold 3 "root db password"
+shares (3 of 5 required to reconstruct):
+  sss1.3.1.…
+  sss1.3.2.…
+  sss1.3.3.…
+  sss1.3.4.…
+  sss1.3.5.…
+…
+$ secretstash combine sss1.3.1.… sss1.3.3.… sss1.3.5.…
+root db password
+```
+
+The web UI mirrors this: tick "Split into shares" on the create page, and use
+`/combine` to paste shares back together. Splitting and reconstruction both run
+in the browser via the same scheme.
+
+Because reconstruction is client-side, **the server is completely unaware that
+sharing exists**: no new endpoint, no protocol change. It still stores one
+ciphertext keyed by the token hash and still can't decrypt anything on its own.
+A reconstructed token is byte-identical to the original, so reads, expiry,
+revoke, and tamper-evidence all behave exactly as for a normal token.
+
+Each share is self-describing (`sss1.<k>.<x>.<checksum>.<body>`) and carries a
+short checksum, so a mistyped or corrupted share is rejected up front rather
+than silently rebuilding the wrong token.
+
+What this is *not*: the server does **not** collect shares or enforce a quorum.
+It only ever sees a final reconstructed token, indistinguishable from any other.
+Doing it the other way, submitting shares to the server to combine, would let
+the server decrypt and would force it to hold partial shares across requests,
+breaking the zero-knowledge, stateless-token design. The threshold guarantee is
+Shamir's math (K-1 shares reveal nothing) plus distributing shares to distinct
+people; it gives you split-trust *custody*, not server-attested authorization.
+
 ## REST API
 
 | Endpoint | Auth | Description |
@@ -149,12 +195,20 @@ secretstash server   [--listen 127.0.0.1:8200] [--tls-cert F --tls-key F | --dev
                      [--max-secret-size 65536] [--max-secrets 10000]
                      [--default-ttl 24h] [--max-ttl 168h] [--max-reads 100]
                      [--real-ip-header NAME] [--no-ui] [--no-metrics] [--share-base-url URL]
-secretstash wrap     [--ttl 30m] [--reads 1] [secret]     # or pipe via stdin
+secretstash wrap     [--ttl 30m] [--reads 1] [--shares N --threshold K] [secret]
 secretstash unwrap   <token>     # secret to stdout, metadata to stderr (pipe-safe)
+secretstash combine  <share>...  [--print-token]   # reconstruct from K shares, then unwrap
 secretstash peek     <token>     # metadata, does not consume a read
 secretstash revoke   <token>
 secretstash status
 ```
+
+`wrap --shares N --threshold K` prints N Shamir shares instead of a single
+token; any K of them reconstruct it (see [Splitting a secret across
+people](#splitting-a-secret-across-people-shamirs-secret-sharing)). `combine`
+takes K shares (positional or repeated `--share`), rebuilds the token locally,
+and unwraps; `--print-token` just prints the reconstructed token so you can
+`peek`/`revoke`/`unwrap` it yourself.
 
 Client flags: `--addr` / `SECRETSTASH_ADDR`, `--tls-skip-verify`, `--json`.
 Exit codes: `0` ok, `1` error, `2` usage, `3` consumed/expired/revoked,
@@ -164,6 +218,11 @@ Exit codes: `0` ok, `1` error, `2` usage, `3` consumed/expired/revoked,
 
 - The wrap token is the secret's only key. Anyone holding it can read the
   secret (once). Send share links over channels you trust.
+- Shamir shares split *custody* of that token across people: any K
+  reconstruct it, any K-1 reveal nothing (information-theoretically). This is
+  a client-side, mathematical guarantee: the server never sees shares and
+  cannot enforce a quorum, and anyone who gathers K shares can reconstruct
+  and read the secret alone.
 - Tokens have 256 bits of `crypto/rand` entropy. Brute force is the actual
   security boundary; per-IP rate limiting is defense in depth.
 - TLS is on by default. The auto-generated cert is self-signed and
@@ -403,6 +462,11 @@ internet-facing deployment, block it at the firewall or proxy (Caddy: a
 ```sh
 make help    # list all targets
 make test    # go test -race ./...
-make check   # vet + govulncheck (if installed) + tests
+make test-js # node --test for the browser shamir.js (needs node 20+)
+make check   # vet + govulncheck + shamir.js tests (if installed) + tests
 make run-dev # plain-HTTP dev server
 ```
+
+The Go code has no external dependencies. The browser Shamir implementation
+(`internal/web/static/shamir.js`) is verified against the Go one by a shared
+fixed vector in both test suites, so the two stay wire-compatible.

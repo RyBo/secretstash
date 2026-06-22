@@ -6,7 +6,7 @@ IMAGE   := secretstash
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64
 
 .DEFAULT_GOAL := help
-.PHONY: help build test vet fmt check run-dev dist docker-build docker-run clean
+.PHONY: help build test test-js vet fmt check run-dev dist docker-build docker-run clean
 
 help: ## List available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -18,14 +18,18 @@ build: ## Build the binary into bin/
 test: ## Run tests with the race detector
 	go test -race ./...
 
+test-js: ## Run the browser shamir.js tests (requires node 20+)
+	node --test internal/web/static/*.test.mjs
+
 vet: ## Run go vet
 	go vet ./...
 
 fmt: ## Format all Go sources
 	go fmt ./...
 
-check: vet test ## Vet, govulncheck (if installed), and test
+check: vet test ## Vet, govulncheck + shamir.js tests (if installed), and test
 	@command -v govulncheck >/dev/null 2>&1 && govulncheck ./... || echo "govulncheck not installed; skipping (go install golang.org/x/vuln/cmd/govulncheck@latest)"
+	@command -v node >/dev/null 2>&1 && node --test internal/web/static/*.test.mjs || echo "node not installed; skipping shamir.js tests"
 
 run-dev: ## Run a plain-HTTP dev server
 	go run . server --dev

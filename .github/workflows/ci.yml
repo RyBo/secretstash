@@ -46,3 +46,13 @@ jobs:
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           "$(go env GOPATH)/bin/govulncheck" ./...
+
+  web-js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20  # Web Crypto, btoa/atob are global in Node 20+
+      - name: shamir.js tests
+        run: node --test internal/web/static/*.test.mjs
