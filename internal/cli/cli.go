@@ -34,7 +34,9 @@ Server:
 
 Client (set SECRETSTASH_ADDR or --addr, default https://127.0.0.1:8200):
   wrap        wrap a secret, print its one-time token and share link
+              (--shares N --threshold K splits the token into K-of-N shares)
   unwrap      consume a read and print the secret to stdout
+  combine     reconstruct a split token from K shares, then unwrap the secret
   peek        show a secret's metadata without consuming a read
   revoke      destroy a secret before it is read
   status      check server health
@@ -62,6 +64,8 @@ func runIO(args []string, stdout, stderr io.Writer, stdin *os.File) int {
 		return cmdWrap(rest, stdout, stderr, stdin)
 	case "unwrap":
 		return cmdUnwrap(rest, stdout, stderr)
+	case "combine":
+		return cmdCombine(rest, stdout, stderr)
 	case "peek":
 		return cmdPeek(rest, stdout, stderr)
 	case "revoke":

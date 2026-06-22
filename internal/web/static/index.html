@@ -45,22 +45,55 @@
         </select>
       </div>
     </div>
+    <label class="checkrow"><input type="checkbox" id="split-toggle"> Split into shares (advanced)</label>
+    <div id="split-opts" class="row hidden">
+      <div>
+        <label for="shares">Number of shares</label>
+        <select id="shares">
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="8">8</option>
+        </select>
+      </div>
+      <div>
+        <label for="threshold">Required to unlock</label>
+        <select id="threshold">
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+        </select>
+      </div>
+    </div>
     <button id="wrap">Create one-time link</button>
     <p id="create-error" class="banner warn hidden"></p>
   </div>
 
   <div id="result" class="panel hidden">
-    <p class="banner warn">This link is shown <strong>once</strong>. The server cannot recover it, so copy it now.</p>
-    <label>Share link</label>
-    <div class="copyfield">
-      <input id="share-url" readonly>
-      <button data-copy="share-url">Copy</button>
+    <p class="banner warn">This is shown <strong>once</strong>. The server cannot recover it, so copy it now.</p>
+
+    <div id="single-result">
+      <label>Share link</label>
+      <div class="copyfield">
+        <input id="share-url" readonly>
+        <button data-copy="share-url">Copy</button>
+      </div>
+      <label>Token (for CLI / API use)</label>
+      <div class="copyfield">
+        <input id="token" readonly>
+        <button data-copy="token">Copy</button>
+      </div>
     </div>
-    <label>Token (for CLI / API use)</label>
-    <div class="copyfield">
-      <input id="token" readonly>
-      <button data-copy="token">Copy</button>
+
+    <div id="shares-result" class="hidden">
+      <p class="meta">Give one share to each holder. Any <span id="quorum-text"></span> can reconstruct the secret at <code>/combine</code> (or <code>secretstash combine</code>). The shares were made in your browser; the server never saw them.</p>
+      <div id="shares-list"></div>
     </div>
+
     <p id="result-meta" class="meta"></p>
     <button id="again" class="secondary">Share another secret</button>
   </div>
@@ -70,6 +103,7 @@
   <h2>How it works</h2>
   <p>secretstash makes a one-time link for a secret. The link works for the number of reads you pick, then the secret is deleted for good. It also expires after the time you set.</p>
   <p>The token that unlocks the secret lives in the part of the link after the <code>#</code>. Browsers never send that part to the server, so it stays out of server logs and link previews. The server only keeps a hashed form of the token, so it cannot read your secret or rebuild a link once it has been shown.</p>
+  <p>You can also split the link into shares (Shamir's Secret Sharing) so several people are needed to unlock one secret. Splitting and reconstructing happen in your browser; the server only ever sees the rebuilt token, never the shares.</p>
   <p>Secrets are kept in memory only. Restarting the server erases all of them.</p>
   <p>Built in Go. The full source is on <a href="https://github.com/RyBo/secretstash" target="_blank" rel="noopener noreferrer">GitHub</a> if you want to check it yourself.</p>
   <button id="about-close" class="secondary" type="button">Close</button>
