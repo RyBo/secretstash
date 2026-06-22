@@ -1,10 +1,11 @@
 "use strict";
 
-// Shared by index.html (create), s.html (unwrap), and combine.html (combine).
-// The unwrap token lives in location.hash: browsers never send the fragment to
-// any server, so share links leak nothing into logs or previews. Shamir shares
-// are pasted on /combine and reconstructed in-browser; only the rebuilt token
-// is ever sent to the server.
+// Shared by index.html (create), unwrap.html (reveal, served at /s and
+// /unwrap), and combine.html (combine). A share link's token lives in
+// location.hash, which browsers never send to any server, so links leak nothing
+// into logs or previews; on /unwrap the token is pasted into a field and kept
+// in memory. Shamir shares are pasted on /combine and reconstructed in-browser.
+// Only a finished token is ever sent to the server.
 
 const $ = (id) => document.getElementById(id);
 
@@ -54,6 +55,7 @@ if (about) {
 function renderGone(status, body) {
   hideIfPresent("waiting");
   hideIfPresent("combine");
+  hideIfPresent("enter");
   const code = body?.code;
   if (code === "consumed") {
     $("gone-msg").textContent = "This secret was already read.";
@@ -179,18 +181,20 @@ function renderShares(parts, k) {
   });
 }
 
-// --- unwrap flow (s.html) ---
+// --- reveal flow (unwrap.html, served at /s and /unwrap) ---
+//
+// The token comes from the URL fragment (share links: /s#ss....) or, when none
+// is present, from a field the recipient pastes into on /unwrap. In the manual
+// case the token is held in memory and never put in the URL.
 
 if ($("reveal")) {
-  const token = location.hash.slice(1);
+  let currentToken = "";
 
-  const init = async () => {
-    if (!token) {
-      show("nolink");
-      return;
-    }
-    // Non-consuming peek: page load must never burn a read, so link previews
-    // and prefetchers can't destroy the secret.
+  // beginUnwrap does a non-consuming peek so loading the page never burns a
+  // read; link previews and prefetchers can't destroy the secret.
+  const beginUnwrap = async (token) => {
+    currentToken = token;
+    hideIfPresent("enter");
     const { status, body } = await apiFetch("/v1/peek", {
       headers: { "X-Stash-Token": token },
     });
@@ -206,7 +210,7 @@ if ($("reveal")) {
   $("reveal").addEventListener("click", async () => {
     const { status, body } = await apiFetch("/v1/unwrap", {
       method: "POST",
-      headers: { "X-Stash-Token": token },
+      headers: { "X-Stash-Token": currentToken },
     });
     if (status !== 200) {
       renderGone(status, body);
@@ -215,7 +219,21 @@ if ($("reveal")) {
     showSecret(body);
   });
 
-  init();
+  const fromHash = location.hash.slice(1);
+  if (fromHash) {
+    beginUnwrap(fromHash);
+  } else if ($("token-load")) {
+    // Manual entry (/unwrap with no fragment).
+    show("enter");
+    const submit = () => {
+      let t = $("token-input").value.trim();
+      // Tolerate someone pasting a whole share link instead of a bare token.
+      if (t.includes("#")) t = t.slice(t.lastIndexOf("#") + 1);
+      if (t) beginUnwrap(t);
+    };
+    $("token-load").addEventListener("click", submit);
+    $("token-input").addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  }
 }
 
 // --- combine flow (combine.html) ---

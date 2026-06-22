@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
-<title>secretstash: a secret is waiting</title><link rel="stylesheet" href="/static/style.css">
+<title>secretstash: reveal a secret</title><link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <header class="topbar">
@@ -19,7 +19,7 @@
 </header>
 <main>
   <h1 class="brand"><a href="/" aria-label="secretstash"><span class="word">secret<span class="accent">stash</span></span></a></h1>
-  <p class="tagline">Someone shared a secret with you.</p>
+  <p class="tagline">Reveal a one-time secret.</p>
 
   <div id="waiting" class="panel hidden">
     <p class="banner info">A secret is waiting for you.</p>
@@ -41,8 +41,13 @@
     <p class="meta error-detail" id="gone-detail"></p>
   </div>
 
-  <div id="nolink" class="panel hidden">
-    <p class="banner warn">This link is missing its secret token. Make sure you copied the full link, including everything after the <code>#</code>.</p>
+  <div id="enter" class="panel hidden">
+    <label for="token-input">Token</label>
+    <div class="copyfield">
+      <input id="token-input" placeholder="ss.…" autofocus>
+      <button id="token-load">Reveal</button>
+    </div>
+    <p class="meta">Paste the secret's token to reveal it. Have multiple shares instead? <a href="/combine">Combine them</a>.</p>
   </div>
 </main>
 

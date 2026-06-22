@@ -22,11 +22,12 @@
   <p class="tagline">Combine shares to unlock a secret.</p>
 
   <div id="combine" class="panel">
-    <p class="banner info">Paste the shares you've collected, one per line. They are combined in your browser — the server never sees them.</p>
+    <p class="banner info">Paste the shares you've collected, one per line. They're combined right here in your browser, so the server never sees them.</p>
     <label for="shares-input">Shares</label>
     <textarea id="shares-input" placeholder="sss1.3.1.…&#10;sss1.3.2.…&#10;sss1.3.4.…"></textarea>
     <button id="combine-reveal">Reconstruct &amp; reveal secret</button>
     <p id="combine-error" class="banner warn hidden"></p>
+    <p class="meta">Have a single token instead? <a href="/unwrap">Unwrap it</a>.</p>
   </div>
 
   <div id="revealed" class="panel hidden">
@@ -47,7 +48,7 @@
 <dialog id="about" class="about">
   <h2>How it works</h2>
   <p>This secret was split into shares using Shamir's Secret Sharing. A set number of shares (the quorum) is needed to unlock it; fewer than that reveal nothing.</p>
-  <p>Combining happens entirely in your browser. The shares are turned back into the unlock token locally, and only that token — never the shares — is sent to the server to retrieve the secret. The server only keeps a hashed form of the token, so it cannot read the secret on its own.</p>
+  <p>Combining happens entirely in your browser. The shares are turned back into the unlock token locally, and only that token, never the shares, is sent to the server to retrieve the secret. The server only keeps a hashed form of the token, so it cannot read the secret on its own.</p>
   <p>The secret works for the number of reads the sender picked, then it is deleted for good. Secrets are kept in memory only; restarting the server erases all of them.</p>
   <p>Built in Go. The full source is on <a href="https://github.com/RyBo/secretstash" target="_blank" rel="noopener noreferrer">GitHub</a> if you want to check it yourself.</p>
   <button id="about-close" class="secondary" type="button">Close</button>

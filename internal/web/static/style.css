@@ -197,6 +197,16 @@ pre.secret {
 .meta { color: var(--muted); font-size: 0.85rem; }
 .error-detail { color: var(--danger); }
 
+/* --- cross-page links (unwrap / combine) --- */
+
+.altlinks { text-align: center; margin-top: 0.75rem; }
+.altlinks a { color: var(--accent-bright); text-decoration: none; }
+.altlinks a:hover { text-decoration: underline; }
+
+/* inline links inside .meta text (e.g. the /combine and /unwrap hints) */
+.meta a { color: var(--accent-bright); text-decoration: none; }
+.meta a:hover { text-decoration: underline; }
+
 /* --- top header bar --- */
 
 .topbar {
